@@ -22,7 +22,6 @@ export default {
   }
 };
 
-// ── Phase 1: CoinGecko 캐싱 프록시 (기존 동일) ──────────────────
 async function handleCoinGecko(request, env, ctx) {
   const cache = caches.default;
   const cached = await cache.match(request);
@@ -61,9 +60,7 @@ async function handleCoinGecko(request, env, ctx) {
   }
 }
 
-// ── Phase 2: AI 분석 자동화 (Gemini API) ──────────────────────
 async function handleAiAnalysis(request, env, ctx) {
-  // 1. API 키 확인
   if (!env.GEMINI_API_KEY) {
     return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
       status: 500,
@@ -71,7 +68,6 @@ async function handleAiAnalysis(request, env, ctx) {
     });
   }
 
-  // 2. 요청 바디 파싱
   let payload;
   try {
     payload = await request.json();
@@ -90,21 +86,17 @@ async function handleAiAnalysis(request, env, ctx) {
     });
   }
 
-  // 3. 사용자 컨텐츠 조립 (기존과 동일)
   const userContent = narrative
     + '\n\n────────────────────────────────────\n[RAW VECTOR JSON]\n'
     + JSON.stringify(vector, null, 2);
 
-  // 4. Gemini API 호출
-  const GEMINI_MODEL = 'gemini-1.5-flash'; // 또는 'gemini-1.5-pro'
+  const GEMINI_MODEL = 'gemini-1.5-flash';
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
   try {
     const r = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: {
           parts: [{
@@ -129,8 +121,6 @@ async function handleAiAnalysis(request, env, ctx) {
     }
 
     const data = await r.json();
-    
-    // 5. Gemini 응답에서 텍스트 추출
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '(빈 응답)';
 
     return new Response(JSON.stringify({ text }), {
@@ -146,7 +136,7 @@ async function handleAiAnalysis(request, env, ctx) {
   }
 }
 
-// ── Phase 3: WebSocket Relay (휴대폰 ↔ Colab) ──────────────────
+// ── WebSocket Relay ──
 const clients = new Set();
 
 async function handleRelay(request, env, ctx) {
