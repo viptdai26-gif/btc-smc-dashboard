@@ -18,6 +18,10 @@ export default {
     if (url.pathname === '/api/ai-analysis' && request.method === 'POST') {
       return handleAiAnalysis(request, env, ctx);
     }
+    // ✅ [신규] WebSocket 중계기 (휴대폰 ↔ Colab)
+    if (url.pathname === '/api/relay' && request.method === 'GET') {
+      return handleRelay(request, env, ctx);
+    }
     return new Response('Not found', { status: 404 });
   }
 };
@@ -151,4 +155,57 @@ async function handleAiAnalysis(request, env, ctx) {
       status: 502, headers: { 'Content-Type': 'application/json' }
     });
   }
+}
+
+// ── Phase 3: WebSocket Relay (휴대폰 ↔ Colab) ──────────────────
+// 목적: 휴대폰 대시보드가 수집한 Binance 실시간 데이터를 Cloudflare Worker가 중계하여
+// Colab(또는 다른 클라이언트)이 구독할 수 있도록 함. Worker는 Binance에 직접 접속하지
+// 않으므로 지역 차단(451/403)을 회피할 수 있음.
+//
+// ⚠️ 주의사항 (엣지 케이스):
+// 현재는 글로벌 Set을 사용하여 WebSocket 연결을 관리합니다. Cloudflare Workers는
+// 단일 격리(Isolate) 내에서만 이 Set을 공유하므로, 여러 Worker 인스턴스가 뜨는 경우
+// 연결이 분산될 수 있습니다. 하지만 개인용/소규모 테스트 용도로는 충분히 작동합니다.
+// 대규모 배포 시에는 Durable Objects 도입을 고려하세요.
+const clients = new Set();
+
+async function handleRelay(request, env, ctx) {
+  const upgradeHeader = request.headers.get('Upgrade');
+  if (upgradeHeader !== 'websocket') {
+    return new Response('Expected WebSocket', { status: 400 });
+  }
+
+  const webSocketPair = new WebSocketPair();
+  const [client, server] = Object.values(webSocketPair);
+
+  server.accept();
+  clients.add(server);
+
+  server.addEventListener('message', (event) => {
+    // 연결된 모든 클라이언트(Colab 등)에게 메시지 브로드캐스트
+    for (const clientSocket of clients) {
+      if (clientSocket !== server && clientSocket.readyState === 1) {
+        try {
+          clientSocket.send(event.data);
+        } catch (e) {
+          // 전송 실패 시 해당 소켓은 무시 (조용히 넘어감)
+        }
+      }
+    }
+  });
+
+  server.addEventListener('close', () => {
+    clients.delete(server);
+  });
+
+  // 필요 시 연결 종료 처리를 위한 에러 핸들러
+  server.addEventListener('error', (event) => {
+    // console.warn('WebSocket error:', event);
+    clients.delete(server);
+  });
+
+  return new Response(null, {
+    status: 101,
+    webSocket: client,
+  });
 }
