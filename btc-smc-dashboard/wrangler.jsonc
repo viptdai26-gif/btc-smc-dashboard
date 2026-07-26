@@ -1,0 +1,13 @@
+{
+  "name": "btc-smc-dashboard",
+  "compatibility_date": "2026-07-15",
+  "main": "src/worker.js",
+  "assets": {
+    "directory": "./public",
+    // "/api/*"만 Worker fetch()를 거침. 그 외 요청(대시보드 HTML 등)은
+    // 플랫폼이 정적 자산에서 직접 서빙 — Worker 미호출, 무료.
+    // (not_found_handling 옵션은 정확한 동작 조건을 검증하지 못해 의도적으로 생략 —
+    //  이 앱은 단일 index.html이라 404 라우팅이 실질적으로 필요 없음)
+    "run_worker_first": ["/api/*"]
+  }
+}
