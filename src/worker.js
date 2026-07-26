@@ -97,8 +97,8 @@ async function handleAiAnalysis(request, env, ctx) {
   //const GEMINI_MODEL = 'gemini-2.5-flash';
   // const GEMINI_MODEL = 'gemini-2.0-flash';   // 안정적
   // const GEMINI_MODEL = 'gemini-2.5-pro';     // 더 정밀 (속도 느림)
-  // const GEMINI_MODEL = 'gemini-flash-latest'; // 최신 Flash
-  const GEMINI_MODEL = 'gemini-pro-latest';   // 최신 Pro
+  const GEMINI_MODEL = 'gemini-flash-latest'; // 최신 Flash
+  // const GEMINI_MODEL = 'gemini-pro-latest';   // 최신 Pro
   // ──────────────────────────────────────────────────────────────
 
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
