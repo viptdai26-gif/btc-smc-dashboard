@@ -22,6 +22,7 @@ export default {
   }
 };
 
+// ── Phase 1: CoinGecko 캐싱 프록시 ──────────────────────────────
 async function handleCoinGecko(request, env, ctx) {
   const cache = caches.default;
   const cached = await cache.match(request);
@@ -60,6 +61,7 @@ async function handleCoinGecko(request, env, ctx) {
   }
 }
 
+// ── Phase 2: AI 분석 자동화 (Gemini API) ──────────────────────
 async function handleAiAnalysis(request, env, ctx) {
   if (!env.GEMINI_API_KEY) {
     return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
@@ -90,7 +92,15 @@ async function handleAiAnalysis(request, env, ctx) {
     + '\n\n────────────────────────────────────\n[RAW VECTOR JSON]\n'
     + JSON.stringify(vector, null, 2);
 
-  const GEMINI_MODEL = 'gemini-1.5-flash';
+  // ── Gemini 모델 선택 ──────────────────────────────────────────
+  // ✅ 현재 활성화된 모델: gemini-2.5-flash (가장 최신, 빠름, 추천)
+  const GEMINI_MODEL = 'gemini-2.5-flash';
+  // const GEMINI_MODEL = 'gemini-2.0-flash';   // 안정적
+  // const GEMINI_MODEL = 'gemini-2.5-pro';     // 더 정밀 (속도 느림)
+  // const GEMINI_MODEL = 'gemini-flash-latest'; // 최신 Flash
+  // const GEMINI_MODEL = 'gemini-pro-latest';   // 최신 Pro
+  // ──────────────────────────────────────────────────────────────
+
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
   try {
@@ -136,7 +146,7 @@ async function handleAiAnalysis(request, env, ctx) {
   }
 }
 
-// ── WebSocket Relay ──
+// ── Phase 3: WebSocket Relay (휴대폰 ↔ Colab) ──────────────────
 const clients = new Set();
 
 async function handleRelay(request, env, ctx) {
